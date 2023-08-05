@@ -10,18 +10,20 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	bindata "github.com/golang-migrate/migrate/v4/source/go_bindata"
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 )
 
 func main() {
+	logrus.SetFormatter(new(logrus.JSONFormatter))
+
 	if err := initConfig(); err != nil {
-		log.Fatalf("error initializing configs: %s", err.Error())
+		logrus.Fatalf("error initializing configs: %s", err.Error())
 	}
 
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("error loadong env variables: %s", err.Error())
+		logrus.Fatalf("error loading env variables: %s", err.Error())
 	}
 
 	db, err := repository.NewPostgresDB(repository.Config{
@@ -33,7 +35,7 @@ func main() {
 		SSLMode:  viper.GetString("db.sslmode"),
 	})
 	if err != nil {
-		log.Fatalf("failed to initialize db: %s", err.Error())
+		logrus.Fatalf("failed to initialize db: %s", err.Error())
 	}
 
 	runMigrate("postgres://postgres:qwerty@localhost:5436/postgres?sslmode=disable")
@@ -44,7 +46,7 @@ func main() {
 
 	srv := new(AuthWithJWT.Server)
 	if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
-		log.Fatalf("error occured while running http server: %s", err.Error())
+		logrus.Fatalf("error occurred while running http server: %s", err.Error())
 	}
 }
 func initConfig() error {
@@ -61,17 +63,17 @@ func runMigrate(dsn string) {
 func runDBMigrate(dsn string, source *bindata.AssetSource) {
 	d, err := bindata.WithInstance(source)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	m, err := migrate.NewWithSourceInstance("go-bindata", d, dsn)
 	if err != nil {
-		log.Fatal(err)
+		logrus.Fatal(err)
 	}
 	if err = m.Up(); err != nil {
 		if err == migrate.ErrNoChange {
-			log.Println(err)
+			logrus.Println(err)
 		} else {
-			log.Fatal(err)
+			logrus.Fatal(err)
 		}
 	}
 }
